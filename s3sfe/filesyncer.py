@@ -35,53 +35,16 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ################################################################################
 """
 
-from setuptools import setup, find_packages
-from s3sfe.version import VERSION, PROJECT_URL
 
-with open('README.rst') as file:
-    long_description = file.read()
-
-requires = [
-    'boto3'
-]
-
-classifiers = [
-    'Development Status :: 3 - Alpha',
-    'Environment :: Console',
-    'Intended Audience :: Developers',
-    'Intended Audience :: End Users/Desktop',
-    'Intended Audience :: Information Technology',
-    'Intended Audience :: System Administrators',
-    'License :: OSI Approved :: GNU Affero General Public License v3 '  # cont..
-    'or later (AGPLv3+)',
-    'Natural Language :: English',
-    'Operating System :: POSIX',
-    'Programming Language :: Python',
-    'Programming Language :: Python :: 2.7',
-    'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.3',
-    'Programming Language :: Python :: 3.4',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
-    'Topic :: System :: Archiving :: Backup',
-    'Topic :: Utilities'
-]
-
-setup(
-    name='s3sfe',
-    version=VERSION,
-    author='Jason Antman',
-    author_email='jason@jasonantman.com',
-    packages=find_packages(),
-    url=PROJECT_URL,
-    description='s3sfe (S3 Sync Filelist Encrypted) Sync a list of files to '
-                'S3, using server-side encryption with customer-provided keys.',
-    long_description=long_description,
-    install_requires=requires,
-    keywords="aws s3 backup encrypted sync",
-    classifiers=classifiers,
-    entry_points="""
-    [console_scripts]
-    s3sfe = s3sfe.runner:main
+class FileSyncer(object):
     """
-)
+    Main class that handles synchronizing files to S3.
+    """
+
+    def __init__(self):
+        pass
+
+    def run(self):
+        # time each major operation
+        # option to return a string report at the end, or print it
+        pass

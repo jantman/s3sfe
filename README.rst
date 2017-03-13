@@ -35,10 +35,27 @@ s3sfe
 
 s3sfe (S3 Sync Filelist Encrypted) Sync a list of files to S3, using server-side encryption with customer-provided keys.
 
+Introduction
+------------
+
+This is a quick script I wrote for my own purposes. It's not terribly well tested,
+and it serves a small niche use case. If you're looking to securely sync your
+backups to S3 or another offsite storage, I'd highly encourage you to look into the
+other options.
+
+My use case is relatively simple:
+
+* I want to sync just some files from my backups to S3; a specific whitelist of
+  files and directories.
+* I don't want to keep history, I just want the latest versions somewhere offsite.
+* I want to use `S3 Server-Side Encryption with Customer-Provided Encryption Keys (SSE-C) <http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html>`_; I'm fine keeping the key on my computer, because if someone can get it, they can get the original files too. I'm not worried about Amazon snooping on my data. I'm not concerned with anyone being able to access the filenames or metadata. All I'm really concerned about is that if a malicious party gets access to my AWS account, they don't also implicitly get the file contents.
+
+This tool takes a list of files or directories on the local filesystem and syncs them to S3, using server-side encryption. It uses the files' md5sums to only upload files that differ from what's already in S3.
+
 Requirements
 ------------
 
-* Python 2.7 or 3.3+ (currently tested with 2.7, 3.3+)
+* Python 2.7 or 3.3+ (currently tested with 2.7, 3.3+ and developed with 3.6)
 * Python `VirtualEnv <http://www.virtualenv.org/>`_ and ``pip`` (recommended installation method; your OS/distribution should have packages for these)
 
 Installation
@@ -55,12 +72,16 @@ for information on how to create a venv.
 Configuration
 -------------
 
-Something here.
+s3sfe takes all of its configuration via command-line options. It does, however,
+expect a few elements of configuration to be present on the system:
+
+* Your AWS Credentials must be available to the program in one of the `methods supported by boto3 <http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials>`_, typically either environment variables or one of the supported credentials files (``~/.aws/credentials`` or ``~/.aws/config``) or boto configuration files (``~/.boto`` or ``/etc/boto.cfg``).
+* Your encryption key for `S3 Server-Side Encryption with Customer-Provided Encryption Keys (SSE-C) <http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html>`_ must be stored in a file readable by this program. This must be a base64-encoded 256-bit AES256 key.
 
 Usage
 -----
 
-Something else here.
+``s3sfe --help``
 
 Bugs and Feature Requests
 -------------------------
@@ -126,7 +147,7 @@ Release Checklist
 8. Create a pull request for the release to be merged into master. Upon successful Travis build, merge it.
 9. Tag the release in Git, push tag to GitHub:
 
-   * tag the release. for now the message is quite simple: ``git tag -a X.Y.Z -m 'X.Y.Z released YYYY-MM-DD'``
+   * tag the release. for now the message is quite simple: ``git tag -s -a X.Y.Z -m 'X.Y.Z released YYYY-MM-DD'``
    * push the tag to GitHub: ``git push origin X.Y.Z``
 
 11. Upload package to live pypi:
