@@ -35,39 +35,34 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ################################################################################
 """
 
-import s3sfe.version as version
+from datetime import datetime
+from hashlib import md5
 
-import re
+
+def md5_file(path):
+    """
+    Return the MD5 sum of the contents of the file at ``path``.
+
+    :param path: path to the file
+    :type path: str
+    :return: md5sum of the file at the given path, as a hex digest
+    :rtype: str
+    """
+    with open(path, 'rb') as fh:
+        m = md5()
+        while True:
+            data = fh.read(128)
+            if not data:
+                break
+            m.update(data)
+        return m.hexdigest()
 
 
-class TestVersion(object):
+def dtnow():
+    """
+    Helper for testing; just returns datetime.datetime.now()
 
-    def test_project_url(self):
-        expected = 'https://github.com/jantman/s3sfe'
-        assert version.PROJECT_URL == expected
-
-    def test_is_semver(self):
-        # see:
-        # https://github.com/mojombo/semver.org/issues/59#issuecomment-57884619
-        semver_ptn = re.compile(
-            r'^'
-            r'(?P<MAJOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<MINOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<PATCH>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'(?:-(?P<prerelease>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'(?:\+(?P<build>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'$'
-        )
-        assert semver_ptn.match(version.VERSION) is not None
+    :return: current datetime - ``datetime.datetime.now()``
+    :rtype: datetime.datetime
+    """
+    return datetime.now()

@@ -35,6 +35,10 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ################################################################################
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class S3Wrapper(object):
     """
@@ -42,21 +46,60 @@ class S3Wrapper(object):
     storage backends.
     """
 
-    def __init__(self, prefix='/'):
-        pass
+    def __init__(self, bucket_name, prefix=None, dry_run=False):
+        """
+        Connect to S3 and setup the file storage backend.
+
+        :param bucket_name: name of S3 bucket to upload to
+        :type bucket_name: str
+        :param prefix: prefix to prepend to file paths, when making them into
+          S3 keys.
+        :type prefix: str
+        :param dry_run: if True, don't actually upload anything, just log what
+        would be uploaded.
+        :type dry_run: bool
+        """
+        logger.debug('Initializing S3: bucket_name=%s prefix=%s dry_run=%s',
+                     bucket_name, prefix, dry_run)
+        self._bucket_name = bucket_name
+        self._prefix = prefix
+        self._dry_run = dry_run
 
     def get_filelist(self):
         """
         Return all files currently stored in the backend, as a dict of the file
         path/key to a 3-tuple of the file size in bytes, file modification time
-        as a datetime.datetime object, and file md5sum (of the original file,
+        as a float timestamp, and file md5sum (of the original file,
         not the encrypted file). File paths/keys are excluding ``self.prefix``,
         i.e. the same paths as they would have on the filesystem.
 
-        :return:
-        :rtype:
+        :return: dict of files currently in S3. Keys are the file path excluding
+          ``self.prefix`` (the path to the file on local disk). Values are
+          3-tuples of size in bytes of the file's unencrypted contents, file
+          modification time as a float timestamp (like the return value of
+          :py:meth:`os.path.getmtime`), and md5sum of the unencrypted file
+          contents as a hex string.
+        :rtype: dict
         """
-        pass
+        raise NotImplementedError()
 
-    def put_file(self, path):
-        pass
+    def put_file(self, path, size_b, mtime, md5sum):
+        """
+        Write a file into the S3 storage backend.
+
+        :param path: The path to the file on disk. This will be written into
+          ``self.bucket_name``, prefixed with ``self.prefix``.
+        :type path: str
+        :param size_b: size of the file on disk in bytes
+        :type size_b: int
+        :param mtime: modification time of the file on disk, as a float
+          timestamp (like the return value of :py:meth:`os.path.getmtime`).
+        :type mtime: float
+        :param md5sum: md5sum of the file contents on disk, as a hex string
+        :type md5sum: str
+        """
+        # set metadata on object in S3
+        # see http://boto3.readthedocs.io/en/latest/reference/customizations/s3.html#boto3.s3.transfer.S3Transfer
+        # and http://boto3.readthedocs.io/en/latest/reference/services/s3.html#S3.Client.upload_file
+        # and http://boto3.readthedocs.io/en/latest/_modules/boto3/s3/transfer.html
+        raise NotImplementedError()
