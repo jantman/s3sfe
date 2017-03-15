@@ -70,13 +70,12 @@ def parse_args(argv):
     :rtype: :py:class:`argparse.Namespace`
     """
     p = argparse.ArgumentParser(
-        description='s3sfe (S3 Sync Filelist Encrypted) Sync a list of files '
-                    'to S3, using server-side encryption with '
-                    'customer-provided keys. - <%s>' % PROJECT_URL
+        description='s3sfe (S3 Sync Filelist Encrypted) file restoration '
+                    'script - <%s>' % PROJECT_URL
     )
     p.add_argument('-d', '--dry-run', dest='dry_run', action='store_true',
                    default=False,
-                   help='do not actually upload; only log what would be done')
+                   help='do not actually restore; only log what would be done')
     p.add_argument('-v', '--verbose', dest='verbose', action='count',
                    default=0,
                    help='verbose output. specify twice for debug-level output.')
@@ -85,21 +84,36 @@ def parse_args(argv):
     p.add_argument('-p', '--s3-prefix', dest='prefix', action='store',
                    default=None, type=str,
                    help='prefix to prepend to file paths when creating S3 keys')
-    p.add_argument('-s', '--summary', dest='summary', action='store_true',
-                   default=False, help='print summary/stats at end of run')
     p.add_argument('-f', '--key-file', dest='key_file', action='store',
                    type=str, default=None,
                    help='path to AES256 key file. This should be a binary file'
                         'containing a 32-byte encryption key to use for SSE-C')
+    p.add_argument('-l', '--filelist-path', dest='FILELIST_PATH', type=str,
+                   action='store', default=None,
+                   help='Path to filelist specifying which files or paths to '
+                        'restore; same format as s3sfe FILELIST_PATH argument. '
+                        'This option cannot be specified in combination with '
+                        'PATHs.')
     p.add_argument('BUCKET_NAME', action='store', type=str,
                    help='Name of S3 bucket to upload to')
-    p.add_argument('FILELIST_PATH', action='store', type=str,
-                   help='Path to filelist specifying which files or paths to '
-                        'upload, one per line. Lines beginning with # will be '
-                        'ignored. Directories will be uploaded recursively.')
+    p.add_argument('LOCAL_PREFIX', action='store', type=str,
+                   help='Local filesystem path prefix to download/restore '
+                        'files under ; set to "/" to overwrite original source '
+                        'paths')
+    p.add_argument('PATH', action='store', type=str, default=None, nargs='?',
+                   help='One specific path or path prefix (directory) to '
+                        'restore; can be specified multiple times. This option '
+                        'cannot be specified in combination with '
+                        '-l|--filelist-path.')
     args = p.parse_args(argv)
     if args.key_file is None:
         raise RuntimeError('Error: -f|--key-file must be specified.')
+    if args.PATH is None and args.FILELIST_PATH is None:
+        raise RuntimeError('Error: you must specify either PATH or '
+                           '-l|--filelist-path')
+    if args.PATH is not None and args.FILELIST_PATH is not None:
+        raise RuntimeError('Error: you must specify either PATH or '
+                           '-l|--filelist-path')
     return args
 
 

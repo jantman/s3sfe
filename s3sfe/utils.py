@@ -37,6 +37,10 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 
 from datetime import datetime
 from hashlib import md5
+import logging
+import os
+
+logger = logging.getLogger(__name__)
 
 
 def md5_file(path):
@@ -66,3 +70,74 @@ def dtnow():
     :rtype: datetime.datetime
     """
     return datetime.now()
+
+
+def set_log_info():
+    """set logger level to INFO"""
+    set_log_level_format(logging.INFO,
+                         '%(asctime)s %(levelname)s:%(name)s:%(message)s')
+
+
+def set_log_debug():
+    """set logger level to DEBUG, and debug-level output format"""
+    set_log_level_format(
+        logging.DEBUG,
+        "%(asctime)s [%(levelname)s %(filename)s:%(lineno)s - "
+        "%(name)s.%(funcName)s() ] %(message)s"
+    )
+
+
+def set_log_level_format(level, format):
+    """
+    Set logger level and format.
+
+    :param level: logging level; see the :py:mod:`logging` constants.
+    :type level: int
+    :param format: logging formatter format string
+    :type format: str
+    """
+    formatter = logging.Formatter(fmt=format)
+    logger.handlers[0].setFormatter(formatter)
+    logger.setLevel(level)
+
+
+def read_filelist(path):
+    """
+    Given the path to the filelist, read the file and return a list of all
+    paths contained in it.
+
+    :param path: path to filelist
+    :type path: str
+    :return: list of files and directories to back up
+    :rtype: list
+    """
+    logger.debug('Reading filelist from: %s', path)
+    if not os.path.exists(path):
+        raise RuntimeError('Filelist does not exist: %s' % path)
+    files = []
+    with open(path, 'r') as fh:
+        for line in fh.readlines():
+            line = line.strip()
+            if line.startswith('#'):
+                continue
+            if line == '':
+                continue
+            files.append(line)
+    logger.debug('Read %d paths', len(files))
+    return files
+
+
+def read_keyfile(path):
+    """
+    Read the AES256 key from the file.
+
+    :param path: path to the key file
+    :type path: str
+    :return: 32-bit AES256 key
+    :rtype: bytes
+    """
+    with open(path, 'rb') as fh:
+        key = fh.read()
+    if len(key) != 32:
+        raise RuntimeError('Key file (%s) must be 32 bytes' % path)
+    return key

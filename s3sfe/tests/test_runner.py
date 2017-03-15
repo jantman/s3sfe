@@ -35,14 +35,9 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ################################################################################
 """
 import sys
-import logging
 import pytest
-from textwrap import dedent
 
-from s3sfe.runner import (
-    main, parse_args, set_log_info, set_log_debug, set_log_level_format,
-    read_filelist
-)
+from s3sfe.runner import main, parse_args
 from s3sfe.version import PROJECT_URL, VERSION
 
 # https://code.google.com/p/mock/issues/detail?id=249
@@ -67,7 +62,8 @@ class TestMain(object):
             prefix=None,
             BUCKET_NAME='mybucket',
             FILELIST_PATH='/foo/bar',
-            summary=False
+            summary=False,
+            key_file='kf'
         )
 
         m_summary = Mock()
@@ -81,63 +77,164 @@ class TestMain(object):
                 set_log_debug=DEFAULT,
                 read_filelist=DEFAULT,
                 parse_args=DEFAULT,
-                FileSyncer=DEFAULT
+                FileSyncer=DEFAULT,
+                read_keyfile=DEFAULT
             ) as mocks:
                 mocks['parse_args'].return_value = mock_args
                 mocks['FileSyncer'].return_value.run.return_value = m_summary
-                with patch.object(sys, 'argv', ['foo', 'mybucket', '/foo/bar']):
+                mocks['read_keyfile'].return_value = 'mykeybinary'
+                with patch.object(
+                        sys, 'argv',
+                        ['foo', '-f', 'kf', 'mybucket', '/foo/bar']
+                ):
                     main()
         assert mocks['set_log_info'].mock_calls == []
         assert mocks['set_log_debug'].mock_calls == []
         assert mocks['parse_args'].mock_calls == [
-            call(['mybucket', '/foo/bar'])
+            call(['-f', 'kf', 'mybucket', '/foo/bar'])
         ]
         assert mocks['read_filelist'].mock_calls == [
             call('/foo/bar')
         ]
+        assert mocks['read_keyfile'].mock_calls == [
+            call('kf')
+        ]
         assert mocks['FileSyncer'].mock_calls == [
-            call('mybucket', prefix=None, dry_run=False),
+            call(
+                'mybucket',
+                prefix=None,
+                dry_run=False,
+                ssec_key='mykeybinary'
+            ),
             call().run(mocks['read_filelist'].return_value)
         ]
+        assert m_summary.mock_calls == []
         assert mocklogger.mock_calls == []
 
+    def test_main_args(self):
+        mock_args = Mock(
+            dry_run=False,
+            verbose=0,
+            prefix=None,
+            BUCKET_NAME='mybucket',
+            FILELIST_PATH='/foo/bar',
+            summary=False,
+            key_file='kf'
+        )
 
-class TestReadFilelist(object):
+        m_summary = Mock()
+        m_summary.summary.return_value = 'foo'
 
-    content = dedent("""
-    # foo
-    /path/one
-    # bar
-    /path/two.txt
-    /foo/baz
-    """)
+        with patch('%s.logger' % pbm, autospec=True):
+            with patch.multiple(
+                pbm,
+                autospec=True,
+                set_log_info=DEFAULT,
+                set_log_debug=DEFAULT,
+                read_filelist=DEFAULT,
+                parse_args=DEFAULT,
+                FileSyncer=DEFAULT,
+                read_keyfile=DEFAULT
+            ) as mocks:
+                mocks['parse_args'].return_value = mock_args
+                mocks['FileSyncer'].return_value.run.return_value = m_summary
+                mocks['read_keyfile'].return_value = 'mykeybinary'
+                main(mock_args)
+        assert mocks['parse_args'].mock_calls == []
 
-    def test_fail(self):
-        with patch('%s.os.path.exists' % pbm, autospec=True) as m_exists:
-            with patch(
-                '%s.open' % pbm, mock_open(read_data=self.content), create=True
-            ) as m_open:
-                m_exists.return_value = False
-                with pytest.raises(RuntimeError):
-                    read_filelist('/my/path')
-        assert m_exists.mock_calls == [call('/my/path')]
-        assert m_open.mock_calls == []
+    def test_main_verbose(self):
+        mock_args = Mock(
+            dry_run=False,
+            verbose=1,
+            prefix=None,
+            BUCKET_NAME='mybucket',
+            FILELIST_PATH='/foo/bar',
+            summary=False,
+            key_file='kf'
+        )
 
-    def test_pass(self):
-        with patch('%s.os.path.exists' % pbm, autospec=True) as m_exists:
-            with patch(
-                '%s.open' % pbm, mock_open(read_data=self.content), create=True
-            ) as m_open:
-                m_exists.return_value = True
-                res = read_filelist('/my/path')
-        assert m_exists.mock_calls == [call('/my/path')]
-        assert m_open.mock_calls == [
-            call('/my/path', 'r'),
-            call().__enter__(),
-            call().readlines(),
-            call().__exit__(None, None, None)
-        ]
-        assert sorted(res) == ['/foo/baz', '/path/one', '/path/two.txt']
+        m_summary = Mock()
+        m_summary.summary.return_value = 'foo'
+
+        with patch('%s.logger' % pbm, autospec=True):
+            with patch.multiple(
+                pbm,
+                autospec=True,
+                set_log_info=DEFAULT,
+                set_log_debug=DEFAULT,
+                read_filelist=DEFAULT,
+                parse_args=DEFAULT,
+                FileSyncer=DEFAULT,
+                read_keyfile=DEFAULT
+            ) as mocks:
+                mocks['parse_args'].return_value = mock_args
+                mocks['FileSyncer'].return_value.run.return_value = m_summary
+                mocks['read_keyfile'].return_value = 'mykeybinary'
+                main(mock_args)
+        assert mocks['set_log_info'].mock_calls == [call()]
+
+    def test_main_verbose2(self):
+        mock_args = Mock(
+            dry_run=False,
+            verbose=2,
+            prefix=None,
+            BUCKET_NAME='mybucket',
+            FILELIST_PATH='/foo/bar',
+            summary=False,
+            key_file='kf'
+        )
+
+        m_summary = Mock()
+        m_summary.summary.return_value = 'foo'
+
+        with patch('%s.logger' % pbm, autospec=True):
+            with patch.multiple(
+                pbm,
+                autospec=True,
+                set_log_info=DEFAULT,
+                set_log_debug=DEFAULT,
+                read_filelist=DEFAULT,
+                parse_args=DEFAULT,
+                FileSyncer=DEFAULT,
+                read_keyfile=DEFAULT
+            ) as mocks:
+                mocks['parse_args'].return_value = mock_args
+                mocks['FileSyncer'].return_value.run.return_value = m_summary
+                mocks['read_keyfile'].return_value = 'mykeybinary'
+                main(mock_args)
+        assert mocks['set_log_debug'].mock_calls == [call()]
+
+    def test_main_summary(self, capsys):
+        mock_args = Mock(
+            dry_run=False,
+            verbose=0,
+            prefix=None,
+            BUCKET_NAME='mybucket',
+            FILELIST_PATH='/foo/bar',
+            summary=True,
+            key_file='kf'
+        )
+
+        m_summary = Mock(summary='foo')
+
+        with patch('%s.logger' % pbm, autospec=True):
+            with patch.multiple(
+                pbm,
+                autospec=True,
+                set_log_info=DEFAULT,
+                set_log_debug=DEFAULT,
+                read_filelist=DEFAULT,
+                parse_args=DEFAULT,
+                FileSyncer=DEFAULT,
+                read_keyfile=DEFAULT
+            ) as mocks:
+                mocks['parse_args'].return_value = mock_args
+                mocks['FileSyncer'].return_value.run.return_value = m_summary
+                mocks['read_keyfile'].return_value = 'mykeybinary'
+                main(mock_args)
+        out, err = capsys.readouterr()
+        assert err == ''
+        assert out == "foo\n"
 
 
 class TestParseArgs(object):
@@ -177,33 +274,40 @@ class TestParseArgs(object):
         assert err == "ERROR: too few arguments\n"
         assert excinfo.value.code == 2
 
+    def test_parse_args_no_key_file(self):
+        with pytest.raises(RuntimeError):
+            parse_args(['-v', 'bktname', '/foo/bar'])
+
     def test_parse_args_basic(self):
-        res = parse_args(['bktname', '/foo/bar'])
+        res = parse_args(['-f', 'kf', 'bktname', '/foo/bar'])
         assert res.BUCKET_NAME == 'bktname'
         assert res.FILELIST_PATH == '/foo/bar'
         assert res.verbose == 0
         assert res.dry_run is False
         assert res.prefix is None
         assert res.summary is False
+        assert res.key_file == 'kf'
 
     def test_parse_args_verbose1(self):
-        res = parse_args(['-v', 'bktname', '/foo/bar'])
+        res = parse_args(['-f', 'kf', '-v', 'bktname', '/foo/bar'])
         assert res.verbose == 1
 
     def test_parse_args_verbose2(self):
-        res = parse_args(['-vv', 'bktname', '/foo/bar'])
+        res = parse_args(['-f', 'kf', '-vv', 'bktname', '/foo/bar'])
         assert res.verbose == 2
 
     def test_parse_args_dry_run(self):
-        res = parse_args(['-d', 'bktname', '/foo/bar'])
+        res = parse_args(['-f', 'kf', '-d', 'bktname', '/foo/bar'])
         assert res.dry_run is True
 
     def test_parse_args_prefix(self):
-        res = parse_args(['--s3-prefix=foo/bar', 'bktname', '/foo/bar'])
+        res = parse_args(
+            ['-f', 'kf', '--s3-prefix=foo/bar', 'bktname', '/foo/bar']
+        )
         assert res.prefix == 'foo/bar'
 
     def test_parse_args_summary(self):
-        res = parse_args(['--summary', 'bktname', '/foo/bar'])
+        res = parse_args(['-f', 'kf', '--summary', 'bktname', '/foo/bar'])
         assert res.summary is True
 
     def test_parse_args_version(self, capsys):
@@ -221,38 +325,3 @@ class TestParseArgs(object):
         else:
             assert out == expected
             assert err == ''
-
-
-class TestLogging(object):
-
-    def test_set_log_info(self):
-        with patch('%s.set_log_level_format' % pbm) as mock_set:
-            set_log_info()
-        assert mock_set.mock_calls == [
-            call(logging.INFO, '%(asctime)s %(levelname)s:%(name)s:%(message)s')
-        ]
-
-    def test_set_log_debug(self):
-        with patch('%s.set_log_level_format' % pbm) as mock_set:
-            set_log_debug()
-        assert mock_set.mock_calls == [
-            call(logging.DEBUG,
-                 "%(asctime)s [%(levelname)s %(filename)s:%(lineno)s - "
-                 "%(name)s.%(funcName)s() ] %(message)s")
-        ]
-
-    def test_set_log_level_format(self):
-        mock_handler = Mock(spec_set=logging.Handler)
-        with patch('%s.logger' % pbm) as mock_logger:
-            with patch('%s.logging.Formatter' % pbm) as mock_formatter:
-                type(mock_logger).handlers = [mock_handler]
-                set_log_level_format(5, 'foo')
-        assert mock_formatter.mock_calls == [
-            call(fmt='foo')
-        ]
-        assert mock_handler.mock_calls == [
-            call.setFormatter(mock_formatter.return_value)
-        ]
-        assert mock_logger.mock_calls == [
-            call.setLevel(5)
-        ]

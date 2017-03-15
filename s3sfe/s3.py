@@ -35,7 +35,12 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ################################################################################
 """
 
+import boto3
 import logging
+import os
+from base64 import b64encode
+from hashlib import md5
+from s3sfe.version import VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +51,7 @@ class S3Wrapper(object):
     storage backends.
     """
 
-    def __init__(self, bucket_name, prefix=None, dry_run=False):
+    def __init__(self, bucket_name, prefix=None, dry_run=False, ssec_key=None):
         """
         Connect to S3 and setup the file storage backend.
 
@@ -58,12 +63,32 @@ class S3Wrapper(object):
         :param dry_run: if True, don't actually upload anything, just log what
         would be uploaded.
         :type dry_run: bool
+        :param ssec_key: 32-bit AES256 SSE-C key (binary)
+        :type ssec_key: bytes
         """
         logger.debug('Initializing S3: bucket_name=%s prefix=%s dry_run=%s',
                      bucket_name, prefix, dry_run)
         self._bucket_name = bucket_name
         self._prefix = prefix
         self._dry_run = dry_run
+        self._key, self._keymd5 = self._encode_key(ssec_key)
+        logger.debug('Connecting to S3')
+        self._s3 = boto3.resource('s3')
+        self._s3client = boto3.client('s3')
+
+    def _encode_key(self, key):
+        """
+        Determine the base64-encoded SSE-C key and its MD5sum, for use in API
+        calls.
+
+        :param key:
+        :type key:
+        :return: 2-tuple of base64-encoded key and base64-encoded MD5 of key
+        :rtype: tuple
+        """
+        k = b64encode(key).decode('utf-8')
+        m = b64encode(md5(key).digest()).decode('utf-8')
+        return k, m
 
     def get_filelist(self):
         """
@@ -81,7 +106,45 @@ class S3Wrapper(object):
           contents as a hex string.
         :rtype: dict
         """
-        raise NotImplementedError()
+        logger.debug('Listing all objects in bucket, under given prefix')
+        files = {}
+        bkt = self._s3.Bucket(self._bucket_name)
+        for obj in bkt.objects.filter(Prefix=self._prefix):
+            files[obj.key] = self._get_metadata(obj.key)
+        logger.debug('Found %d matching objects', len(files))
+        return files
+
+    def _get_metadata(self, key):
+        """
+        Return metadata for one key in the bucket.
+
+        :param key: key in the bucket
+        :type key: str
+        :return: metadata for key
+        :rtype: dict
+        """
+        m = self._s3client.head_object(
+            Bucket=self._bucket_name,
+            Key=key,
+            SSECustomerAlgorithm='AES256',
+            SSECustomerKey=self._key,
+            SSECustomerKeyMD5=self._keymd5
+        )['Metadata']
+
+        return m
+
+    def _key_for_path(self, path):
+        """
+        Return the S3 key prefix for a given file.
+
+        :param path: The path to the file on disk.
+        :type path: str
+        :return: S3 key for the given local path
+        :rtype: str
+        """
+        if self._prefix is None or self._prefix == '':
+            return path
+        return self._prefix + '/' + path
 
     def put_file(self, path, size_b, mtime, md5sum):
         """
@@ -98,8 +161,61 @@ class S3Wrapper(object):
         :param md5sum: md5sum of the file contents on disk, as a hex string
         :type md5sum: str
         """
-        # set metadata on object in S3
-        # see http://boto3.readthedocs.io/en/latest/reference/customizations/s3.html#boto3.s3.transfer.S3Transfer
-        # and http://boto3.readthedocs.io/en/latest/reference/services/s3.html#S3.Client.upload_file
-        # and http://boto3.readthedocs.io/en/latest/_modules/boto3/s3/transfer.html
-        raise NotImplementedError()
+        bkt = self._s3.Bucket(self._bucket_name)
+        key = self._key_for_path(path)
+        if self._dry_run:
+            logger.warning("DRY RUN; would upload %s to %s", path, key)
+            return
+        logger.debug('Uploading %s to %s', path, key)
+        bkt.upload_file(
+            path,
+            key,
+            ExtraArgs={
+                'ACL': 'private',
+                'SSECustomerAlgorithm': 'AES256',
+                'SSECustomerKey': self._key,
+                'SSECustomerKeyMD5': self._keymd5,
+                'Metadata': {
+                    'UploadedBy': 's3sfe-%s' % VERSION,
+                    'size_b': '%s' % size_b,
+                    'mtime': '%s' % mtime,
+                    'md5sum': '%s' % md5sum
+                }
+            }
+        )
+
+    def get_file(self, path, local_prefix=None):
+        """
+        Download a file that was originally at ``path`` locally. If
+        ``local_prefix`` is not None, the local file will be replaced with the
+        downloaded one. Otherwise, the download path will be prefixed with
+        ``local_prefix``.
+
+        :param path: local file path to download from S3
+        :type path: str
+        :param local_prefix: prefix to download under locally
+        :type local_prefix: str
+        """
+        bkt = self._s3.Bucket(self._bucket_name)
+        key = self._key_for_path(path)
+        if local_prefix is None:
+            real_path = path
+        else:
+            real_path = os.path.join(local_prefix, path)
+        dldir = os.path.dirname(real_path)
+        if self._dry_run:
+            logger.warning("DRY RUN; would download %s to %s", key, real_path)
+            return
+        logger.debug('Downloading s3 key %s to %s', key, real_path)
+        if not os.path.exists(dldir):
+            logger.debug('Creating download directory: %s', dldir)
+            os.makedirs(dldir)
+        bkt.download_file(
+            key,
+            real_path,
+            ExtraArgs={
+                'SSECustomerAlgorithm': 'AES256',
+                'SSECustomerKey': self._key,
+                'SSECustomerKeyMD5': self._keymd5
+            }
+        )

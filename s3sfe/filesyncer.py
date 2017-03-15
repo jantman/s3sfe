@@ -50,13 +50,28 @@ class FileSyncer(object):
     Main class that handles synchronizing files to S3.
     """
 
-    def __init__(self, bucket_name, prefix=None, dry_run=False):
+    def __init__(self, bucket_name, prefix=None, dry_run=False, ssec_key=None):
+        """
+        Initialize the FileSyncer
+
+        :param bucket_name: name of S3 bucket to sync to
+        :type bucket_name: str
+        :param prefix: string to prefix file paths with, to determine their
+          keys in S3
+        :type prefix: str
+        :param dry_run: if true, do not actually upload; print what would be
+          done
+        :type dry_run: bool
+        :param ssec_key: 32-bit AES256 SSE-C key (binary)
+        :type ssec_key: bytes
+        """
         if prefix is None:
-            prefix = '/'
-        if not prefix.startswith('/'):
-            prefix = '/' + prefix
-        logger.debug('Using S3 prefix: %s', prefix)
-        self.s3 = S3Wrapper(bucket_name, prefix=prefix, dry_run=dry_run)
+            prefix = ''
+        logger.debug('Using S3 prefix: "%s"', prefix)
+        self.s3 = S3Wrapper(
+            bucket_name, prefix=prefix, dry_run=dry_run, ssec_key=ssec_key
+        )
+        self._dry_run = dry_run
 
     def run(self, file_paths):
         """
@@ -87,7 +102,8 @@ class FileSyncer(object):
         logger.debug('Ending run...')
         return RunStats(
             start_dt, meta_dt, query_dt, calc_dt, upload_dt, end_dt,
-            len(all_files), len(to_upload), errors, total_size, uploaded_bytes
+            len(all_files), len(to_upload), errors, total_size, uploaded_bytes,
+            dry_run=self._dry_run
         )
 
     def _list_all_files(self, paths):

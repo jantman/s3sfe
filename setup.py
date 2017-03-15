@@ -42,7 +42,8 @@ with open('README.rst') as file:
     long_description = file.read()
 
 requires = [
-    'boto3'
+    'boto3',
+    'humanize'
 ]
 
 classifiers = [
@@ -83,5 +84,6 @@ setup(
     entry_points="""
     [console_scripts]
     s3sfe = s3sfe.runner:main
+    s3sfe-restore = s3sfe.restorer:main
     """
 )

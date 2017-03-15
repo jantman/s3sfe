@@ -61,17 +61,18 @@ class TestInit(object):
             cls = FileSyncer('bname')
         assert cls.s3 == m_s3
         assert mock_s3.mock_calls == [
-            call('bname', prefix='/', dry_run=False)
+            call('bname', prefix='', dry_run=False, ssec_key=None)
         ]
+        assert cls._dry_run is False
 
     def test_init_prefix_no_slash(self):
         m_s3 = Mock()
         with patch('%s.S3Wrapper' % pbm, autospec=True) as mock_s3:
             mock_s3.return_value = m_s3
-            cls = FileSyncer('bname', prefix='foo')
+            cls = FileSyncer('bname', prefix='foo', ssec_key='foo')
         assert cls.s3 == m_s3
         assert mock_s3.mock_calls == [
-            call('bname', prefix='/foo', dry_run=False)
+            call('bname', prefix='foo', dry_run=False, ssec_key='foo')
         ]
 
     def test_init_args(self):
@@ -81,8 +82,9 @@ class TestInit(object):
             cls = FileSyncer('bname', prefix='/foo', dry_run=True)
         assert cls.s3 == m_s3
         assert mock_s3.mock_calls == [
-            call('bname', prefix='/foo', dry_run=True)
+            call('bname', prefix='/foo', dry_run=True, ssec_key=None)
         ]
+        assert cls._dry_run is True
 
 
 class TestListAllFiles(object):
@@ -335,7 +337,7 @@ class TestRun(object):
         assert mock_stats.mock_calls == [
             call(
                 'dt_start', 'dt_meta', 'dt_query', 'dt_calc', 'dt_upload',
-                'dt_end', 3, 2, ['one'], 11, 123
+                'dt_end', 3, 2, ['one'], 11, 123, dry_run=False
             )
         ]
         assert res == mock_stats.return_value
