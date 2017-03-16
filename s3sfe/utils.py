@@ -139,5 +139,6 @@ def read_keyfile(path):
     with open(path, 'rb') as fh:
         key = fh.read()
     if len(key) != 32:
-        raise RuntimeError('Key file (%s) must be 32 bytes' % path)
+        raise RuntimeError('Key file must be 32 bytes; %s is %d bytes' % (
+            path, len(key)))
     return key

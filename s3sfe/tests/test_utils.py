@@ -174,28 +174,30 @@ class TestReadKeyFile(object):
 
     def test_ok(self):
         content = bytes('abcdefghijklmnopqrstuvwxyz012345', 'utf8')
-        with patch(
-            '%s.open' % pbm, mock_open(read_data=content), create=True
-        ) as m_open:
+        with patch('%s.open' % pbm, create=True) as m_open:
+            m_read = m_open.return_value.__enter__.return_value.read
+            m_read.return_value = content
             res = read_keyfile('/my/path')
+        assert res == content
         assert m_open.mock_calls == [
             call('/my/path', 'rb'),
             call().__enter__(),
-            call().read(),
+            call().__enter__().read(),
             call().__exit__(None, None, None)
         ]
-        assert res == content
 
     def test_wrong_length(self):
         content = bytes('abc123', 'utf8')
-        with patch(
-            '%s.open' % pbm, mock_open(read_data=content), create=True
-        ) as m_open:
-            with pytest.raises(RuntimeError):
+        with patch('%s.open' % pbm, create=True) as m_open:
+            m_read = m_open.return_value.__enter__.return_value.read
+            m_read.return_value = content
+            with pytest.raises(RuntimeError) as exc:
                 read_keyfile('/my/path')
+            exc_str = 'Key file must be 32 bytes; /my/path is 6 bytes'
+            assert exc_str in str(exc)
         assert m_open.mock_calls == [
             call('/my/path', 'rb'),
             call().__enter__(),
-            call().read(),
+            call().__enter__().read(),
             call().__exit__(None, None, None)
         ]
