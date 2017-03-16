@@ -222,7 +222,9 @@ class FileSyncer(object):
         files = []
         for root, _, filenames in os.walk(path):
             for fn in filenames:
-                files.append(os.path.join(root, fn))
+                p = os.path.join(root, fn)
+                if os.path.isfile(p):
+                    files.append(p)
         return files
 
     def _file_meta(self, files):

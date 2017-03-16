@@ -184,12 +184,12 @@ class TestFileMeta(object):
             with patch('%s.os.path.getsize' % pbm, autospec=True) as mock_sz:
                 with patch('%s.os.path.getmtime' % pbm,
                            autospec=True) as mock_mtime:
-                    mock_sz.side_effect = [6789, 1234]
-                    mock_mtime.side_effect = [
-                        123456789.0123,
-                        987654321.5432
-                    ]
-                    res = self.cls._file_meta(['a', 'b'])
+                        mock_sz.side_effect = [6789, 1234]
+                        mock_mtime.side_effect = [
+                            123456789.0123,
+                            987654321.5432
+                        ]
+                        res = self.cls._file_meta(['a', 'b'])
         assert res == {
             'a': (6789, 123456789.0123, 'abcd1234a'),
             'b': (1234, 987654321.5432, 'abcd1234b')
@@ -207,20 +207,28 @@ class TestListdir(object):
             self.mock_s3 = mock_s3
 
     def test_simple(self):
+
+        def se_isfile(p):
+            if p == '/foo/foo2':
+                return False
+            return True
+
         result = [
             ('/foo', ['bar'], ['foo1', 'foo2']),
             ('/foo/bar', ['baz', 'blam'], ['foobar1']),
             ('/foo/bar/baz', [], ['foobarbaz1', 'foobarbaz2'])
         ]
         expected = [
-            '/foo/foo1', '/foo/foo2',
+            '/foo/foo1',
             '/foo/bar/foobar1',
             '/foo/bar/baz/foobarbaz1',
             '/foo/bar/baz/foobarbaz2'
         ]
         with patch('%s.os.walk' % pbm, autospec=True) as mock_walk:
-            mock_walk.return_value = iter(result)
-            res = self.cls._listdir('/foo')
+            with patch('%s.os.path.isfile' % pbm, autospec=True) as mock_if:
+                mock_walk.return_value = iter(result)
+                mock_if.side_effect = se_isfile
+                res = self.cls._listdir('/foo')
         assert sorted(res) == sorted(expected)
         assert mock_walk.mock_calls == [call('/foo')]
 
