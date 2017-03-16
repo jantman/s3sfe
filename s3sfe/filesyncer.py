@@ -96,7 +96,7 @@ class FileSyncer(object):
         files = self._file_meta(all_files)
         total_size = sum(files[f][0] for f in files.keys())
         logger.info('Source: %d files total, %d bytes total',
-                     len(files), total_size)
+                    len(files), total_size)
         query_dt = dtnow()
         s3files = self.s3.get_filelist()
         logger.info('S3: %d files total', len(s3files))
