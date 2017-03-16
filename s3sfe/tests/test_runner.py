@@ -259,19 +259,6 @@ class TestParseArgs(object):
         )
         assert out == ''
 
-    @pytest.mark.skipif(sys.version_info[0:2] != (2, 7), reason='py27 only')
-    def test_parse_args_none_py27(self, capsys):
-        """this just exists to get coverage to pass on py27"""
-        m_args = Mock(BUCKET_NAME=None)
-        with pytest.raises(SystemExit) as excinfo:
-            with patch('%s.argparse.ArgumentParser' % pbm) as mock_parser:
-                mock_parser.return_value.parse_args.return_value = m_args
-                parse_args([])
-        out, err = capsys.readouterr()
-        assert out == ''
-        assert err == "ERROR: too few arguments\n"
-        assert excinfo.value.code == 2
-
     def test_parse_args_no_key_file(self):
         with pytest.raises(RuntimeError):
             parse_args(['-v', 'bktname', '/foo/bar'])

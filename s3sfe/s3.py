@@ -84,8 +84,8 @@ class S3Wrapper(object):
         Determine the base64-encoded SSE-C key and its MD5sum, for use in API
         calls.
 
-        :param key:
-        :type key:
+        :param key: the binary SSE-C key
+        :type key: str or bytes
         :return: 2-tuple of base64-encoded key and base64-encoded MD5 of key
         :rtype: tuple
         """

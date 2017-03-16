@@ -46,8 +46,10 @@ if (
         sys.version_info[0] == 3 and sys.version_info[1] < 4
 ):
     from mock import patch, call, Mock, PropertyMock, MagicMock  # noqa
+    PY3 = False
 else:
     from unittest.mock import patch, call, Mock, PropertyMock, MagicMock  # noqa
+    PY3 = True
 
 pbm = 's3sfe.s3'
 pb = '%s.S3Wrapper' % pbm
@@ -102,7 +104,10 @@ class TestEncodeKey(object):
                     self.cls = S3Wrapper('bname')
 
     def test_encode_key(self):
-        key = bytes('foo', 'utf8')
+        if PY3:
+            key = bytes('foo', 'utf8')
+        else:
+            key = 'foo'
         expected_key = 'Zm9v'
         expected_md5 = 'rL0Y20zC+Fzt72VPzMSk2A=='
         res = self.cls._encode_key(key)

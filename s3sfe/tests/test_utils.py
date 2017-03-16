@@ -173,7 +173,7 @@ class TestReadFilelist(object):
 class TestReadKeyFile(object):
 
     def test_ok(self):
-        content = bytes('abcdefghijklmnopqrstuvwxyz012345', 'utf8')
+        content = 'abcdefghijklmnopqrstuvwxyz012345'
         with patch('%s.open' % pbm, create=True) as m_open:
             m_read = m_open.return_value.__enter__.return_value.read
             m_read.return_value = content
@@ -187,7 +187,7 @@ class TestReadKeyFile(object):
         ]
 
     def test_wrong_length(self):
-        content = bytes('abc123', 'utf8')
+        content = 'abc123'
         with patch('%s.open' % pbm, create=True) as m_open:
             m_read = m_open.return_value.__enter__.return_value.read
             m_read.return_value = content
