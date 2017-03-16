@@ -199,6 +199,33 @@ class TestFileMeta(object):
         assert mock_mtime.mock_calls == [call('a'), call('b')]
 
 
+class TestFilterFilelist(object):
+
+    def setup(self):
+        with patch('%s.S3Wrapper' % pbm, autospec=True) as mock_s3:
+            self.cls = FileSyncer('bname')
+            self.mock_s3 = mock_s3
+
+    def test_simple(self):
+        local_files = [
+            '/foo/one',
+            '/foo/two',
+            '/foo/three',
+            '/foo/bar/one',
+            '/foo/bar/three',
+            '/foo/barzzz',
+        ]
+        exclude_paths = ['/foo/bar/']
+        expected = [
+            '/foo/one',
+            '/foo/two',
+            '/foo/three',
+            '/foo/barzzz'
+        ]
+        res = self.cls._filter_filelist(local_files, exclude_paths)
+        assert res == expected
+
+
 class TestListdir(object):
 
     def setup(self):
@@ -254,29 +281,6 @@ class TestFilesToUpload(object):
         assert res == {
             '/foo/one': (111, 12345.67, 'aaaa'),
             '/foo/two': (222, 23456.78, 'bbbb')
-        }
-
-    def test_exclude(self):
-        local_files = {
-            '/foo/one': (111, 12345.67, 'aaaa'),
-            '/foo/two': (222, 23456.78, 'bbbb'),
-            '/foo/three': (333, 34567.89, 'cccc'),
-            '/foo/bar/one': (333, 34567.89, 'cccc'),
-            '/foo/bar/three': (333, 34567.89, 'cccc'),
-            '/foo/barzzz': (333, 34567.89, 'cccc'),
-        }
-        s3_files = {}
-        exclude_paths = [
-            '/foo/bar/'
-        ]
-        res = self.cls._files_to_upload(
-            local_files, s3_files, exclude_paths=exclude_paths
-        )
-        assert res == {
-            '/foo/one': (111, 12345.67, 'aaaa'),
-            '/foo/two': (222, 23456.78, 'bbbb'),
-            '/foo/three': (333, 34567.89, 'cccc'),
-            '/foo/barzzz': (333, 34567.89, 'cccc')
         }
 
 
@@ -344,7 +348,8 @@ class TestRun(object):
                     _list_all_files=DEFAULT,
                     _file_meta=DEFAULT,
                     _files_to_upload=DEFAULT,
-                    _upload_files=DEFAULT
+                    _upload_files=DEFAULT,
+                    _filter_filelist=DEFAULT
                 ) as mocks:
                     mocks['_list_all_files'].return_value = [
                         'one', 'two', 'three']
@@ -360,7 +365,7 @@ class TestRun(object):
         ]
         assert self.mock_s3.return_value.get_filelist.mock_calls == [call()]
         assert mocks['_files_to_upload'].mock_calls == [
-            call(self.cls, local_files, s3_files, exclude_paths=[])
+            call(self.cls, local_files, s3_files)
         ]
         assert mocks['_upload_files'].mock_calls == [
             call(self.cls, to_upload)
@@ -371,6 +376,7 @@ class TestRun(object):
                 'dt_end', 3, 2, ['one'], 11, 123, dry_run=False
             )
         ]
+        assert mocks['_filter_filelist'].mock_calls == []
         assert res == mock_stats.return_value
 
     def test_exclude(self):
@@ -406,31 +412,36 @@ class TestRun(object):
                     _list_all_files=DEFAULT,
                     _file_meta=DEFAULT,
                     _files_to_upload=DEFAULT,
-                    _upload_files=DEFAULT
+                    _upload_files=DEFAULT,
+                    _filter_filelist=DEFAULT
                 ) as mocks:
                     mocks['_list_all_files'].return_value = [
                         'one', 'two', 'three']
                     mocks['_file_meta'].return_value = local_files
                     mocks['_files_to_upload'].return_value = to_upload
                     mocks['_upload_files'].return_value = (['one'], 123)
+                    mocks['_filter_filelist'].return_value = ['one', 'two']
                     res = self.cls.run(paths, exclude_paths=['a', 'b'])
         assert mocks['_list_all_files'].mock_calls == [
             call(self.cls, paths)
         ]
         assert mocks['_file_meta'].mock_calls == [
-            call(self.cls, ['one', 'two', 'three'])
+            call(self.cls, ['one', 'two'])
         ]
         assert self.mock_s3.return_value.get_filelist.mock_calls == [call()]
         assert mocks['_files_to_upload'].mock_calls == [
-            call(self.cls, local_files, s3_files, exclude_paths=['a', 'b'])
+            call(self.cls, local_files, s3_files)
         ]
         assert mocks['_upload_files'].mock_calls == [
             call(self.cls, to_upload)
         ]
+        assert mocks['_filter_filelist'].mock_calls == [
+            call(self.cls, ['one', 'two', 'three'], ['a', 'b'])
+        ]
         assert mock_stats.mock_calls == [
             call(
                 'dt_start', 'dt_meta', 'dt_query', 'dt_calc', 'dt_upload',
-                'dt_end', 3, 2, ['one'], 11, 123, dry_run=False
+                'dt_end', 2, 2, ['one'], 11, 123, dry_run=False
             )
         ]
         assert res == mock_stats.return_value

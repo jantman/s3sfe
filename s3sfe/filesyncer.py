@@ -90,6 +90,8 @@ class FileSyncer(object):
         logger.debug('Starting run...')
         start_dt = dtnow()
         all_files = self._list_all_files(file_paths)
+        if len(exclude_paths) > 0:
+            all_files = self._filter_filelist(all_files, exclude_paths)
         meta_dt = dtnow()
         files = self._file_meta(all_files)
         total_size = sum(files[f][0] for f in files.keys())
@@ -99,9 +101,7 @@ class FileSyncer(object):
         s3files = self.s3.get_filelist()
         logger.debug('S3: %d files total', len(s3files))
         calc_dt = dtnow()
-        to_upload = self._files_to_upload(
-            files, s3files, exclude_paths=exclude_paths
-        )
+        to_upload = self._files_to_upload(files, s3files)
         upload_dt = dtnow()
         errors, uploaded_bytes = self._upload_files(to_upload)
         end_dt = dtnow()
@@ -249,7 +249,34 @@ class FileSyncer(object):
             )
         return meta
 
-    def _files_to_upload(self, local_files, s3_files, exclude_paths=[]):
+    def _filter_filelist(self, all_files, exclude_paths):
+        """
+        Given a list of all candidate files and a list of path prefixes to
+        exclude, return all files from ``all_files`` that do not begin with an
+        excluded path.
+
+        :param all_files: list of all candidate local files
+        :type all_files: list
+        :param exclude_paths: list of path starting substrings to exclude from
+          backups. Any path beginning with one of these strings will be
+          excluded from the backup.
+        :type exclude_paths: list
+        :return: all files not excluded
+        :rtype: list
+        """
+        res = []
+        for f in all_files:
+            for path in exclude_paths:
+                if f.startswith(path):
+                    # excluded; ignore
+                    logger.debug('Excluding %s based on exclude path %s',
+                                 f, path)
+                    break
+            else:
+                res.append(f)
+        return res
+
+    def _files_to_upload(self, local_files, s3_files):
         """
         Given two dicts of files, one local and one in S3, each having keys of
         the local file path and values that are 3-tuples of (file size in bytes,
@@ -264,10 +291,6 @@ class FileSyncer(object):
         :type local_files: dict
         :param s3_files: S3 file paths to current metadata
         :type s3_files: dict
-        :param exclude_paths: list of path starting substrings to exclude from
-          backups. Any path beginning with one of these strings will be
-          excluded from the backup.
-        :type exclude_paths: list
         :return: subset of local_files that are not in S3, or need to be
           updated in S3 (per the md5sum)
         :rtype: dict
@@ -279,15 +302,7 @@ class FileSyncer(object):
             if k in s3_files and local_files[k][2] == s3_files[k][2]:
                 # md5sums match
                 continue
-            for path in exclude_paths:
-                if k.startswith(path):
-                    # excluded; ignore
-                    logger.debug('Excluding %s based on exclude path %s',
-                                 k, path)
-                    break
-            else:
-                # didn't break; not excluded; add it
-                files[k] = local_files[k]
+            files[k] = local_files[k]
         logger.debug('Found %d files to upload', len(files))
         return files
 
