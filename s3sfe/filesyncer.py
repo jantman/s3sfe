@@ -73,15 +73,19 @@ class FileSyncer(object):
         )
         self._dry_run = dry_run
 
-    def run(self, file_paths):
+    def run(self, file_paths, exclude_paths=[]):
         """
         Run the sync. Return some statistics about it.
 
         :param file_paths: list of file paths to synchronize. Can be files or
           directories; directories will be synced recursively.
         :type file_paths: list
+        :param exclude_paths: list of path starting substrings to exclude from
+          backups. Any path beginning with one of these strings will be
+          excluded from the backup.
+        :type exclude_paths: list
         :return: statistics about the synchronization operation.
-        :rtype:
+        :rtype: s3sfe.runstats.RunStats
         """
         logger.debug('Starting run...')
         start_dt = dtnow()
@@ -95,7 +99,9 @@ class FileSyncer(object):
         s3files = self.s3.get_filelist()
         logger.debug('S3: %d files total', len(s3files))
         calc_dt = dtnow()
-        to_upload = self._files_to_upload(files, s3files)
+        to_upload = self._files_to_upload(
+            files, s3files, exclude_paths=exclude_paths
+        )
         upload_dt = dtnow()
         errors, uploaded_bytes = self._upload_files(to_upload)
         end_dt = dtnow()
@@ -241,7 +247,7 @@ class FileSyncer(object):
             )
         return meta
 
-    def _files_to_upload(self, local_files, s3_files):
+    def _files_to_upload(self, local_files, s3_files, exclude_paths=[]):
         """
         Given two dicts of files, one local and one in S3, each having keys of
         the local file path and values that are 3-tuples of (file size in bytes,
@@ -249,10 +255,17 @@ class FileSyncer(object):
         string), return the subset of ``local_files`` that are not in, or do
         not have md5sums matching, ``s3_files``.
 
+        If ``exclude_paths`` is not empty, any local file with a path beginning
+        with an entry in ``exclude_paths`` will be omitted.
+
         :param local_files: local file paths to current metadata
         :type local_files: dict
         :param s3_files: S3 file paths to current metadata
         :type s3_files: dict
+        :param exclude_paths: list of path starting substrings to exclude from
+          backups. Any path beginning with one of these strings will be
+          excluded from the backup.
+        :type exclude_paths: list
         :return: subset of local_files that are not in S3, or need to be
           updated in S3 (per the md5sum)
         :rtype: dict
@@ -261,12 +274,18 @@ class FileSyncer(object):
                      len(local_files), len(s3_files))
         files = {}
         for k in local_files.keys():
-            if k not in s3_files:
-                files[k] = local_files[k]
+            if k in s3_files and local_files[k][2] == s3_files[k][2]:
+                # md5sums match
                 continue
-            if local_files[k][2] != s3_files[k][2]:
+            for path in exclude_paths:
+                if k.startswith(path):
+                    # excluded; ignore
+                    logger.debug('Excluding %s based on exclude path %s',
+                                 k, path)
+                    break
+            else:
+                # didn't break; not excluded; add it
                 files[k] = local_files[k]
-                continue
         logger.debug('Found %d files to upload', len(files))
         return files
 

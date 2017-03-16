@@ -96,6 +96,12 @@ def parse_args(argv):
                    type=str, default=None,
                    help='path to AES256 key file. This should be a binary file'
                         ' containing a 32-byte encryption key to use for SSE-C')
+    p.add_argument('-e', '--exclude-file', dest='exclude_file', type=str,
+                   default=None, action='store',
+                   help='File specifying paths to exclude from backup, one per '
+                        'line, in the same format as FILELIST_PATH. Any paths '
+                        'beginning with (substring/startswith) a line from '
+                        'this file will be excluded from the backup')
     p.add_argument('BUCKET_NAME', action='store', type=str,
                    help='Name of S3 bucket to upload to')
     p.add_argument('FILELIST_PATH', action='store', type=str,
@@ -129,7 +135,10 @@ def main(args=None):
         ssec_key=read_keyfile(args.key_file)
     )
     files = read_filelist(args.FILELIST_PATH)
-    stats = s.run(files)
+    exclude = []
+    if args.exclude_file is not None:
+        exclude = read_filelist(args.exclude_file)
+    stats = s.run(files, exclude_paths=exclude)
     if args.summary:
         print(stats.summary)
 

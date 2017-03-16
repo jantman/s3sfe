@@ -232,7 +232,7 @@ class TestFilesToUpload(object):
             self.cls = FileSyncer('bname')
             self.mock_s3 = mock_s3
 
-    def test_files_to_upload(self):
+    def test_simple(self):
         local_files = {
             '/foo/one': (111, 12345.67, 'aaaa'),
             '/foo/two': (222, 23456.78, 'bbbb'),
@@ -246,6 +246,29 @@ class TestFilesToUpload(object):
         assert res == {
             '/foo/one': (111, 12345.67, 'aaaa'),
             '/foo/two': (222, 23456.78, 'bbbb')
+        }
+
+    def test_exclude(self):
+        local_files = {
+            '/foo/one': (111, 12345.67, 'aaaa'),
+            '/foo/two': (222, 23456.78, 'bbbb'),
+            '/foo/three': (333, 34567.89, 'cccc'),
+            '/foo/bar/one': (333, 34567.89, 'cccc'),
+            '/foo/bar/three': (333, 34567.89, 'cccc'),
+            '/foo/barzzz': (333, 34567.89, 'cccc'),
+        }
+        s3_files = {}
+        exclude_paths = [
+            '/foo/bar/'
+        ]
+        res = self.cls._files_to_upload(
+            local_files, s3_files, exclude_paths=exclude_paths
+        )
+        assert res == {
+            '/foo/one': (111, 12345.67, 'aaaa'),
+            '/foo/two': (222, 23456.78, 'bbbb'),
+            '/foo/three': (333, 34567.89, 'cccc'),
+            '/foo/barzzz': (333, 34567.89, 'cccc')
         }
 
 
@@ -329,7 +352,69 @@ class TestRun(object):
         ]
         assert self.mock_s3.return_value.get_filelist.mock_calls == [call()]
         assert mocks['_files_to_upload'].mock_calls == [
-            call(self.cls, local_files, s3_files)
+            call(self.cls, local_files, s3_files, exclude_paths=[])
+        ]
+        assert mocks['_upload_files'].mock_calls == [
+            call(self.cls, to_upload)
+        ]
+        assert mock_stats.mock_calls == [
+            call(
+                'dt_start', 'dt_meta', 'dt_query', 'dt_calc', 'dt_upload',
+                'dt_end', 3, 2, ['one'], 11, 123, dry_run=False
+            )
+        ]
+        assert res == mock_stats.return_value
+
+    def test_exclude(self):
+        paths = ['a', 'b']
+        s3_files = {
+            'one': (1, 2, 'three'),
+            'two': (4, 5, 'six')
+        }
+        local_files = {
+            'one': (1, 2, 'three'),
+            'two': (4, 5, 'NOTsix'),
+            'three': (6, 7, 'eight')
+        }
+        to_upload = {
+            'two': (4, 5, 'NOTsix'),
+            'three': (6, 7, 'eight')
+        }
+        self.mock_s3.return_value.get_filelist.return_value = s3_files
+        dates = [
+            'dt_start',
+            'dt_meta',
+            'dt_query',
+            'dt_calc',
+            'dt_upload',
+            'dt_end'
+        ]
+        with patch('%s.dtnow' % pbm, autospec=True) as mock_dtnow:
+            mock_dtnow.side_effect = dates
+            with patch('%s.RunStats' % pbm, autospec=True) as mock_stats:
+                with patch.multiple(
+                    pb,
+                    autospec=True,
+                    _list_all_files=DEFAULT,
+                    _file_meta=DEFAULT,
+                    _files_to_upload=DEFAULT,
+                    _upload_files=DEFAULT
+                ) as mocks:
+                    mocks['_list_all_files'].return_value = [
+                        'one', 'two', 'three']
+                    mocks['_file_meta'].return_value = local_files
+                    mocks['_files_to_upload'].return_value = to_upload
+                    mocks['_upload_files'].return_value = (['one'], 123)
+                    res = self.cls.run(paths, exclude_paths=['a', 'b'])
+        assert mocks['_list_all_files'].mock_calls == [
+            call(self.cls, paths)
+        ]
+        assert mocks['_file_meta'].mock_calls == [
+            call(self.cls, ['one', 'two', 'three'])
+        ]
+        assert self.mock_s3.return_value.get_filelist.mock_calls == [call()]
+        assert mocks['_files_to_upload'].mock_calls == [
+            call(self.cls, local_files, s3_files, exclude_paths=['a', 'b'])
         ]
         assert mocks['_upload_files'].mock_calls == [
             call(self.cls, to_upload)

@@ -63,7 +63,8 @@ class TestMain(object):
             BUCKET_NAME='mybucket',
             FILELIST_PATH='/foo/bar',
             summary=False,
-            key_file='kf'
+            key_file='kf',
+            exclude_file=None
         )
 
         m_summary = Mock()
@@ -106,7 +107,10 @@ class TestMain(object):
                 dry_run=False,
                 ssec_key='mykeybinary'
             ),
-            call().run(mocks['read_filelist'].return_value)
+            call().run(
+                mocks['read_filelist'].return_value,
+                exclude_paths=[]
+            )
         ]
         assert m_summary.mock_calls == []
         assert mocklogger.mock_calls == []
@@ -119,7 +123,8 @@ class TestMain(object):
             BUCKET_NAME='mybucket',
             FILELIST_PATH='/foo/bar',
             summary=False,
-            key_file='kf'
+            key_file='kf',
+            exclude_file=None
         )
 
         m_summary = Mock()
@@ -142,6 +147,56 @@ class TestMain(object):
                 main(mock_args)
         assert mocks['parse_args'].mock_calls == []
 
+    def test_main_exclude(self):
+        mock_args = Mock(
+            dry_run=False,
+            verbose=1,
+            prefix=None,
+            BUCKET_NAME='mybucket',
+            FILELIST_PATH='/foo/bar',
+            summary=False,
+            key_file='kf',
+            exclude_file='/foo/exc'
+        )
+
+        m_summary = Mock()
+        m_summary.summary.return_value = 'foo'
+
+        with patch.multiple(
+            pbm,
+            autospec=True,
+            set_log_info=DEFAULT,
+            set_log_debug=DEFAULT,
+            read_filelist=DEFAULT,
+            parse_args=DEFAULT,
+            FileSyncer=DEFAULT,
+            read_keyfile=DEFAULT
+        ) as mocks:
+            mocks['parse_args'].return_value = mock_args
+            mocks['FileSyncer'].return_value.run.return_value = m_summary
+            mocks['read_keyfile'].return_value = 'mykeybinary'
+            mocks['read_filelist'].side_effect = [
+                ['/foo1', '/foo2'],
+                ['/exc1', '/exc2']
+            ]
+            main(mock_args)
+        assert mocks['read_filelist'].mock_calls == [
+            call('/foo/bar'),
+            call('/foo/exc')
+        ]
+        assert mocks['FileSyncer'].mock_calls == [
+            call(
+                'mybucket',
+                prefix=None,
+                dry_run=False,
+                ssec_key='mykeybinary'
+            ),
+            call().run(
+                ['/foo1', '/foo2'],
+                exclude_paths=['/exc1', '/exc2']
+            )
+        ]
+
     def test_main_verbose(self):
         mock_args = Mock(
             dry_run=False,
@@ -150,7 +205,8 @@ class TestMain(object):
             BUCKET_NAME='mybucket',
             FILELIST_PATH='/foo/bar',
             summary=False,
-            key_file='kf'
+            key_file='kf',
+            exclude_file=None
         )
 
         m_summary = Mock()
@@ -180,7 +236,8 @@ class TestMain(object):
             BUCKET_NAME='mybucket',
             FILELIST_PATH='/foo/bar',
             summary=False,
-            key_file='kf'
+            key_file='kf',
+            exclude_file=None
         )
 
         m_summary = Mock()
@@ -210,7 +267,8 @@ class TestMain(object):
             BUCKET_NAME='mybucket',
             FILELIST_PATH='/foo/bar',
             summary=True,
-            key_file='kf'
+            key_file='kf',
+            exclude_file=None
         )
 
         m_summary = Mock(summary='foo')
@@ -272,6 +330,7 @@ class TestParseArgs(object):
         assert res.prefix is None
         assert res.summary is False
         assert res.key_file == 'kf'
+        assert res.exclude_file is None
 
     def test_parse_args_verbose1(self):
         res = parse_args(['-f', 'kf', '-v', 'bktname', '/foo/bar'])
@@ -284,6 +343,10 @@ class TestParseArgs(object):
     def test_parse_args_dry_run(self):
         res = parse_args(['-f', 'kf', '-d', 'bktname', '/foo/bar'])
         assert res.dry_run is True
+
+    def test_parse_args_exclude(self):
+        res = parse_args(['-f', 'kf', '-e', '/exc/f', 'bktname', '/foo/bar'])
+        assert res.exclude_file == '/exc/f'
 
     def test_parse_args_prefix(self):
         res = parse_args(
