@@ -95,34 +95,39 @@ class TestDtnow(object):
 class TestLogging(object):
 
     def test_set_log_info(self):
+        mockl = Mock()
         with patch('%s.set_log_level_format' % pbm) as mock_set:
-            set_log_info()
+            set_log_info(mockl)
         assert mock_set.mock_calls == [
-            call(logging.INFO, '%(asctime)s %(levelname)s:%(name)s:%(message)s')
+            call(
+                mockl, logging.INFO,
+                '%(asctime)s %(levelname)s:%(name)s:%(message)s'
+            )
         ]
 
     def test_set_log_debug(self):
+        mockl = Mock()
         with patch('%s.set_log_level_format' % pbm) as mock_set:
-            set_log_debug()
+            set_log_debug(mockl)
         assert mock_set.mock_calls == [
-            call(logging.DEBUG,
+            call(mockl, logging.DEBUG,
                  "%(asctime)s [%(levelname)s %(filename)s:%(lineno)s - "
                  "%(name)s.%(funcName)s() ] %(message)s")
         ]
 
     def test_set_log_level_format(self):
         mock_handler = Mock(spec_set=logging.Handler)
-        with patch('%s.logger' % pbm) as mock_logger:
-            with patch('%s.logging.Formatter' % pbm) as mock_formatter:
-                type(mock_logger).handlers = [mock_handler]
-                set_log_level_format(5, 'foo')
+        mock_l = Mock(spec_set=logging._loggerClass)
+        type(mock_l).handlers = [mock_handler]
+        with patch('%s.logging.Formatter' % pbm) as mock_formatter:
+            set_log_level_format(mock_l, 5, 'foo')
         assert mock_formatter.mock_calls == [
             call(fmt='foo')
         ]
         assert mock_handler.mock_calls == [
             call.setFormatter(mock_formatter.return_value)
         ]
-        assert mock_logger.mock_calls == [
+        assert mock_l.mock_calls == [
             call.setLevel(5)
         ]
 

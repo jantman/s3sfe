@@ -356,3 +356,25 @@ class TestGetFile(object):
         assert m_kfp.mock_calls == [call(self.cls, 'f/path')]
         assert m_exists.mock_calls == [call('/foo/f')]
         assert m_mkdirs.mock_calls == [call('/foo/f')]
+
+
+class TestPathForKey(object):
+
+    def setup(self):
+        with patch('%s.boto3.resource' % pbm, autospec=True):
+            with patch('%s.boto3.client' % pbm, autospec=True):
+                with patch('%s._encode_key' % pb, autospec=True) as m_ek:
+                    m_ek.return_value = ('key', 'md5')
+                    self.cls = S3Wrapper('bname')
+
+    def test_no_prefix(self):
+        self.cls._prefix = ''
+        assert self.cls._path_for_key('/p/k') == '/p/k'
+
+    def test_prefix_no_slash(self):
+        self.cls._prefix = 'foo'
+        assert self.cls._path_for_key('foo/foo/bar') == '/foo/bar'
+
+    def test_prefix_with_slash(self):
+        self.cls._prefix = 'prefix/'
+        assert self.cls._path_for_key('prefix/foo/bar') == '/foo/bar'

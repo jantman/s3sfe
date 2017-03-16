@@ -41,6 +41,7 @@ import os
 from base64 import b64encode
 from hashlib import md5
 from s3sfe.version import VERSION
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,8 @@ class S3Wrapper(object):
     Wrapper around S3 API. Intended to possibly, maybe, one day, allow other
     storage backends.
     """
+
+    slash_re = re.compile('\/+')
 
     def __init__(self, bucket_name, prefix='', dry_run=False, ssec_key=None):
         """
@@ -113,15 +116,26 @@ class S3Wrapper(object):
             objects = bkt.objects.all()
         else:
             objects = bkt.objects.filter(Prefix=self._prefix)
-        print(objects)
         for obj in objects:
-            if self._prefix == '':
-                k = obj.key
-            else:
-                k = obj.key[len(self._prefix):]
-            files[k] = self._get_metadata(obj.key)
+            files[self._path_for_key(obj.key)] = self._get_metadata(obj.key)
         logger.debug('Found %d matching objects', len(files))
         return files
+
+    def _path_for_key(self, key):
+        """
+        Given a key in S3, return the filesystem path it corresponds to
+
+        :param key: S3 key
+        :type key: str
+        :return: corresponding file path
+        :rtype: str
+        """
+        if self._prefix == '':
+            return key
+        k = key[len(self._prefix):]
+        if self._prefix.endswith('/') and not k.startswith('/'):
+            k = '/' + k
+        return k
 
     def _get_metadata(self, key):
         """
@@ -153,7 +167,9 @@ class S3Wrapper(object):
         """
         if self._prefix is None or self._prefix == '':
             return path
-        return (self._prefix + '/' + path).replace('//', '/')
+        # be sure to collapse slashes
+        p = self.slash_re.sub('/', self._prefix + '/' + path)
+        return p
 
     def put_file(self, path, size_b, mtime, md5sum):
         """

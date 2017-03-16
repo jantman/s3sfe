@@ -59,6 +59,11 @@ botocore_log = logging.getLogger("botocore")
 botocore_log.setLevel(logging.WARNING)
 botocore_log.propagate = True
 
+# suppress s3transfer internal logging below WARNING level
+s3transfer_log = logging.getLogger("s3transfer")
+s3transfer_log.setLevel(logging.WARNING)
+s3transfer_log.propagate = True
+
 
 def parse_args(argv):
     """
@@ -90,7 +95,7 @@ def parse_args(argv):
     p.add_argument('-f', '--key-file', dest='key_file', action='store',
                    type=str, default=None,
                    help='path to AES256 key file. This should be a binary file'
-                        'containing a 32-byte encryption key to use for SSE-C')
+                        ' containing a 32-byte encryption key to use for SSE-C')
     p.add_argument('BUCKET_NAME', action='store', type=str,
                    help='Name of S3 bucket to upload to')
     p.add_argument('FILELIST_PATH', action='store', type=str,
@@ -113,9 +118,9 @@ def main(args=None):
 
     # set logging level
     if args.verbose > 1:
-        set_log_debug()
+        set_log_debug(logger)
     elif args.verbose == 1:
-        set_log_info()
+        set_log_info(logger)
 
     s = FileSyncer(
         args.BUCKET_NAME,

@@ -37,7 +37,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import sys
 import pytest
 
-from s3sfe.runner import main, parse_args
+from s3sfe.runner import main, parse_args, logger
 from s3sfe.version import PROJECT_URL, VERSION
 
 # https://code.google.com/p/mock/issues/detail?id=249
@@ -156,22 +156,21 @@ class TestMain(object):
         m_summary = Mock()
         m_summary.summary.return_value = 'foo'
 
-        with patch('%s.logger' % pbm, autospec=True):
-            with patch.multiple(
-                pbm,
-                autospec=True,
-                set_log_info=DEFAULT,
-                set_log_debug=DEFAULT,
-                read_filelist=DEFAULT,
-                parse_args=DEFAULT,
-                FileSyncer=DEFAULT,
-                read_keyfile=DEFAULT
-            ) as mocks:
-                mocks['parse_args'].return_value = mock_args
-                mocks['FileSyncer'].return_value.run.return_value = m_summary
-                mocks['read_keyfile'].return_value = 'mykeybinary'
-                main(mock_args)
-        assert mocks['set_log_info'].mock_calls == [call()]
+        with patch.multiple(
+            pbm,
+            autospec=True,
+            set_log_info=DEFAULT,
+            set_log_debug=DEFAULT,
+            read_filelist=DEFAULT,
+            parse_args=DEFAULT,
+            FileSyncer=DEFAULT,
+            read_keyfile=DEFAULT
+        ) as mocks:
+            mocks['parse_args'].return_value = mock_args
+            mocks['FileSyncer'].return_value.run.return_value = m_summary
+            mocks['read_keyfile'].return_value = 'mykeybinary'
+            main(mock_args)
+        assert mocks['set_log_info'].mock_calls == [call(logger)]
 
     def test_main_verbose2(self):
         mock_args = Mock(
@@ -187,22 +186,21 @@ class TestMain(object):
         m_summary = Mock()
         m_summary.summary.return_value = 'foo'
 
-        with patch('%s.logger' % pbm, autospec=True):
-            with patch.multiple(
-                pbm,
-                autospec=True,
-                set_log_info=DEFAULT,
-                set_log_debug=DEFAULT,
-                read_filelist=DEFAULT,
-                parse_args=DEFAULT,
-                FileSyncer=DEFAULT,
-                read_keyfile=DEFAULT
-            ) as mocks:
-                mocks['parse_args'].return_value = mock_args
-                mocks['FileSyncer'].return_value.run.return_value = m_summary
-                mocks['read_keyfile'].return_value = 'mykeybinary'
-                main(mock_args)
-        assert mocks['set_log_debug'].mock_calls == [call()]
+        with patch.multiple(
+            pbm,
+            autospec=True,
+            set_log_info=DEFAULT,
+            set_log_debug=DEFAULT,
+            read_filelist=DEFAULT,
+            parse_args=DEFAULT,
+            FileSyncer=DEFAULT,
+            read_keyfile=DEFAULT
+        ) as mocks:
+            mocks['parse_args'].return_value = mock_args
+            mocks['FileSyncer'].return_value.run.return_value = m_summary
+            mocks['read_keyfile'].return_value = 'mykeybinary'
+            main(mock_args)
+        assert mocks['set_log_debug'].mock_calls == [call(logger)]
 
     def test_main_summary(self, capsys):
         mock_args = Mock(

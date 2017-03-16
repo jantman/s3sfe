@@ -59,6 +59,11 @@ botocore_log = logging.getLogger("botocore")
 botocore_log.setLevel(logging.WARNING)
 botocore_log.propagate = True
 
+# suppress s3transfer internal logging below WARNING level
+s3transfer_log = logging.getLogger("s3transfer")
+s3transfer_log.setLevel(logging.WARNING)
+s3transfer_log.propagate = True
+
 
 def parse_args(argv):
     """
@@ -127,9 +132,9 @@ def main(args=None):
 
     # set logging level
     if args.verbose > 1:
-        set_log_debug()
+        set_log_debug(logger)
     elif args.verbose == 1:
-        set_log_info()
+        set_log_info(logger)
 
     s = FileSyncer(
         args.BUCKET_NAME,

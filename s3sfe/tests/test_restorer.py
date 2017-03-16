@@ -37,7 +37,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import sys
 import pytest
 
-from s3sfe.restorer import main, parse_args
+from s3sfe.restorer import main, parse_args, logger
 from s3sfe.version import PROJECT_URL, VERSION
 
 # https://code.google.com/p/mock/issues/detail?id=249
@@ -168,21 +168,20 @@ class TestMain(object):
             PATH=['/foo']
         )
 
-        with patch('%s.logger' % pbm, autospec=True):
-            with patch.multiple(
-                pbm,
-                autospec=True,
-                set_log_info=DEFAULT,
-                set_log_debug=DEFAULT,
-                read_filelist=DEFAULT,
-                parse_args=DEFAULT,
-                FileSyncer=DEFAULT,
-                read_keyfile=DEFAULT
-            ) as mocks:
-                mocks['parse_args'].return_value = mock_args
-                mocks['read_keyfile'].return_value = 'mykeybinary'
-                main(mock_args)
-        assert mocks['set_log_info'].mock_calls == [call()]
+        with patch.multiple(
+            pbm,
+            autospec=True,
+            set_log_info=DEFAULT,
+            set_log_debug=DEFAULT,
+            read_filelist=DEFAULT,
+            parse_args=DEFAULT,
+            FileSyncer=DEFAULT,
+            read_keyfile=DEFAULT
+        ) as mocks:
+            mocks['parse_args'].return_value = mock_args
+            mocks['read_keyfile'].return_value = 'mykeybinary'
+            main(mock_args)
+        assert mocks['set_log_info'].mock_calls == [call(logger)]
         assert mocks['set_log_debug'].mock_calls == []
         assert mocks['parse_args'].mock_calls == []
         assert mocks['read_filelist'].mock_calls == []
@@ -211,22 +210,21 @@ class TestMain(object):
             PATH=['/foo']
         )
 
-        with patch('%s.logger' % pbm, autospec=True):
-            with patch.multiple(
-                pbm,
-                autospec=True,
-                set_log_info=DEFAULT,
-                set_log_debug=DEFAULT,
-                read_filelist=DEFAULT,
-                parse_args=DEFAULT,
-                FileSyncer=DEFAULT,
-                read_keyfile=DEFAULT
-            ) as mocks:
-                mocks['parse_args'].return_value = mock_args
-                mocks['read_keyfile'].return_value = 'mykeybinary'
-                main(mock_args)
+        with patch.multiple(
+            pbm,
+            autospec=True,
+            set_log_info=DEFAULT,
+            set_log_debug=DEFAULT,
+            read_filelist=DEFAULT,
+            parse_args=DEFAULT,
+            FileSyncer=DEFAULT,
+            read_keyfile=DEFAULT
+        ) as mocks:
+            mocks['parse_args'].return_value = mock_args
+            mocks['read_keyfile'].return_value = 'mykeybinary'
+            main(mock_args)
         assert mocks['set_log_info'].mock_calls == []
-        assert mocks['set_log_debug'].mock_calls == [call()]
+        assert mocks['set_log_debug'].mock_calls == [call(logger)]
         assert mocks['parse_args'].mock_calls == []
         assert mocks['read_filelist'].mock_calls == []
         assert mocks['read_keyfile'].mock_calls == [

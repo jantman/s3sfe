@@ -72,22 +72,22 @@ def dtnow():
     return datetime.now()
 
 
-def set_log_info():
+def set_log_info(_logger):
     """set logger level to INFO"""
-    set_log_level_format(logging.INFO,
+    set_log_level_format(_logger, logging.INFO,
                          '%(asctime)s %(levelname)s:%(name)s:%(message)s')
 
 
-def set_log_debug():
+def set_log_debug(_logger):
     """set logger level to DEBUG, and debug-level output format"""
     set_log_level_format(
-        logging.DEBUG,
+        _logger, logging.DEBUG,
         "%(asctime)s [%(levelname)s %(filename)s:%(lineno)s - "
         "%(name)s.%(funcName)s() ] %(message)s"
     )
 
 
-def set_log_level_format(level, format):
+def set_log_level_format(_logger, level, format):
     """
     Set logger level and format.
 
@@ -97,8 +97,8 @@ def set_log_level_format(level, format):
     :type format: str
     """
     formatter = logging.Formatter(fmt=format)
-    logger.handlers[0].setFormatter(formatter)
-    logger.setLevel(level)
+    _logger.handlers[0].setFormatter(formatter)
+    _logger.setLevel(level)
 
 
 def read_filelist(path):
