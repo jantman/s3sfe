@@ -105,7 +105,7 @@ class S3Wrapper(object):
           ``self.prefix`` (the path to the file on local disk). Values are
           3-tuples of size in bytes of the file's unencrypted contents, file
           modification time as a float timestamp (like the return value of
-          :py:meth:`os.path.getmtime`), and md5sum of the unencrypted file
+          :py:func:`os.path.getmtime`), and md5sum of the unencrypted file
           contents as a hex string.
         :rtype: dict
         """
@@ -181,7 +181,7 @@ class S3Wrapper(object):
         :param size_b: size of the file on disk in bytes
         :type size_b: int
         :param mtime: modification time of the file on disk, as a float
-          timestamp (like the return value of :py:meth:`os.path.getmtime`).
+          timestamp (like the return value of :py:func:`os.path.getmtime`).
         :type mtime: float
         :param md5sum: md5sum of the file contents on disk, as a hex string
         :type md5sum: str
