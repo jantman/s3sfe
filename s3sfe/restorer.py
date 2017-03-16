@@ -100,7 +100,7 @@ def parse_args(argv):
                    help='Local filesystem path prefix to download/restore '
                         'files under ; set to "/" to overwrite original source '
                         'paths')
-    p.add_argument('PATH', action='store', type=str, default=None, nargs='?',
+    p.add_argument('PATH', action='store', type=str, default=None, nargs='*',
                    help='One specific path or path prefix (directory) to '
                         'restore; can be specified multiple times. This option '
                         'cannot be specified in combination with '
@@ -108,12 +108,12 @@ def parse_args(argv):
     args = p.parse_args(argv)
     if args.key_file is None:
         raise RuntimeError('Error: -f|--key-file must be specified.')
-    if args.PATH is None and args.FILELIST_PATH is None:
-        raise RuntimeError('Error: you must specify either PATH or '
+    if args.PATH == [] and args.FILELIST_PATH is None:
+        raise RuntimeError('Error: you must specify either PATH(s) or '
                            '-l|--filelist-path')
-    if args.PATH is not None and args.FILELIST_PATH is not None:
-        raise RuntimeError('Error: you must specify either PATH or '
-                           '-l|--filelist-path')
+    if args.PATH != [] and args.FILELIST_PATH is not None:
+        raise RuntimeError('Error: you must specify either PATH(s) or '
+                           '-l|--filelist-path, not both')
     return args
 
 
@@ -137,10 +137,11 @@ def main(args=None):
         dry_run=args.dry_run,
         ssec_key=read_keyfile(args.key_file)
     )
-    files = read_filelist(args.FILELIST_PATH)
-    stats = s.run(files)
-    if args.summary:
-        print(stats.summary)
+    if args.FILELIST_PATH is not None:
+        files = read_filelist(args.FILELIST_PATH)
+    else:
+        files = args.PATH
+    s.restore(args.LOCAL_PREFIX, files)
 
 
 if __name__ == "__main__":

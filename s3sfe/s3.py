@@ -51,7 +51,7 @@ class S3Wrapper(object):
     storage backends.
     """
 
-    def __init__(self, bucket_name, prefix=None, dry_run=False, ssec_key=None):
+    def __init__(self, bucket_name, prefix='', dry_run=False, ssec_key=None):
         """
         Connect to S3 and setup the file storage backend.
 
@@ -109,8 +109,17 @@ class S3Wrapper(object):
         logger.debug('Listing all objects in bucket, under given prefix')
         files = {}
         bkt = self._s3.Bucket(self._bucket_name)
-        for obj in bkt.objects.filter(Prefix=self._prefix):
-            files[obj.key] = self._get_metadata(obj.key)
+        if self._prefix == '':
+            objects = bkt.objects.all()
+        else:
+            objects = bkt.objects.filter(Prefix=self._prefix)
+        print(objects)
+        for obj in objects:
+            if self._prefix == '':
+                k = obj.key
+            else:
+                k = obj.key[len(self._prefix):]
+            files[k] = self._get_metadata(obj.key)
         logger.debug('Found %d matching objects', len(files))
         return files
 
@@ -144,7 +153,7 @@ class S3Wrapper(object):
         """
         if self._prefix is None or self._prefix == '':
             return path
-        return self._prefix + '/' + path
+        return (self._prefix + '/' + path).replace('//', '/')
 
     def put_file(self, path, size_b, mtime, md5sum):
         """
@@ -199,9 +208,11 @@ class S3Wrapper(object):
         bkt = self._s3.Bucket(self._bucket_name)
         key = self._key_for_path(path)
         if local_prefix is None:
-            real_path = path
+            real_path = os.path.abspath(path)
         else:
-            real_path = os.path.join(local_prefix, path)
+            if path[0] == '/':
+                path = path[1:]
+            real_path = os.path.abspath(os.path.join(local_prefix, path))
         dldir = os.path.dirname(real_path)
         if self._dry_run:
             logger.warning("DRY RUN; would download %s to %s", key, real_path)

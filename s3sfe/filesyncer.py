@@ -106,6 +106,75 @@ class FileSyncer(object):
             dry_run=self._dry_run
         )
 
+    def restore(self, local_prefix, file_paths):
+        """
+        Restore one or more files.
+
+        :param local_prefix: local filesystem prefix to restore files under
+        :type local_prefix: str
+        :param file_paths: list of file paths to synchronize. Can be files or
+          directories; directories will be synced recursively.
+        :type file_paths: list
+        """
+        logger.info('Beginning restoration of files to: %s', local_prefix)
+        logger.debug('Files to restore: %s', file_paths)
+        logger.debug('Listing files in S3 bucket')
+        s3files = self.s3.get_filelist()
+        logger.debug(
+            'Found %d files in S3; building restore file list', len(s3files)
+        )
+        restore_files = self._make_restore_file_list(file_paths, s3files)
+        logger.info('Found %d files to restore', len(restore_files))
+        success = 0
+        errors = []
+        for fpath in restore_files:
+            try:
+                self.s3.get_file(fpath, local_prefix)
+                success += 1
+            except Exception as ex:
+                logger.error('Error downloading file %s: %s',
+                             fpath, ex, exc_info=True)
+                errors.append(fpath)
+        if len(errors) > 0:
+            logger.error(
+                'ERROR: Failed downloading %d of %d files',
+                len(errors), len(restore_files)
+            )
+        else:
+            logger.info(
+                'Successfully downloaded all %d files', len(restore_files)
+            )
+        return errors
+
+    def _make_restore_file_list(self, restore_paths, s3_files):
+        """
+        Given a list of paths the user asked to restore and a the files in
+        S3, build the full list of files to restore/download.
+
+        :param restore_paths: list of file paths to synchronize. Can be files or
+          directories; directories will be synced recursively.
+        :type restore_paths: list
+        :param s3_files: S3 file paths to current metadata
+        :type s3_files: dict
+        :return: list of S3 files to download
+        :rtype: list
+        """
+        res = []
+        s3_files = s3_files.keys()
+        for fpath in restore_paths:
+            if fpath in s3_files:
+                res.append(fpath)
+                continue
+            # not in S3 files... might be a path
+            subs = 0
+            for s3path in s3_files:
+                if s3path.startswith(fpath):
+                    res.append(s3path)
+                    subs += 1
+            if subs > 0:
+                logger.debug('Found %d files in S3 under path %s', subs, s3path)
+        return res
+
     def _list_all_files(self, paths):
         """
         Given a list of paths on the local filesystem, return a list of all

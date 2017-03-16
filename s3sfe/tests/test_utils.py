@@ -39,10 +39,12 @@ import sys
 import pytest
 import logging
 from textwrap import dedent
+from freezegun import freeze_time
+from datetime import datetime
 
 from s3sfe.utils import (
     set_log_info, set_log_debug, set_log_level_format,
-    read_filelist, read_keyfile
+    read_filelist, read_keyfile, dtnow, md5_file
 )
 
 # https://code.google.com/p/mock/issues/detail?id=249
@@ -56,6 +58,38 @@ else:
     from unittest.mock import patch, call, Mock, DEFAULT, mock_open  # noqa
 
 pbm = 's3sfe.utils'
+
+
+class TestMd5File(object):
+
+    def test_md5_file(self):
+        data = ('a' * 128) + ('b' * 128) + ('c' * 30)
+        with patch(
+            '%s.open' % pbm, mock_open(read_data=data), create=True
+        ) as m_open:
+            with patch('%s.md5' % pbm, autospec=True) as mock_md5:
+                mock_md5.return_value.hexdigest.return_value = 'abc123'
+                res = md5_file('/foo/bar')
+        assert res == 'abc123'
+        assert m_open.mock_calls == [
+            call('/foo/bar', 'rb'),
+            call().__enter__(),
+            call().read(128),
+            call().read(128),
+            call().__exit__(None, None, None)
+        ]
+        assert mock_md5.mock_calls == [
+            call(),
+            call().update(data),
+            call().hexdigest()
+        ]
+
+
+class TestDtnow(object):
+
+    @freeze_time('2017-01-02 13:24:36')
+    def test_dtnow(self):
+        assert dtnow() == datetime(2017, 1, 2, 13, 24, 36)
 
 
 class TestLogging(object):

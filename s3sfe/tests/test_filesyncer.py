@@ -341,3 +341,123 @@ class TestRun(object):
             )
         ]
         assert res == mock_stats.return_value
+
+
+class TestRestore(object):
+
+    def setup(self):
+        with patch('%s.S3Wrapper' % pbm, autospec=True) as mock_s3:
+            self.cls = FileSyncer('bname')
+            self.mock_s3 = mock_s3
+
+    def test_simple(self):
+        s3files = {
+            '/foo': {},
+            '/bar/baz/blarg1': {},
+            '/bar/baz/blarg2': {},
+            '/bar/baz/blarg/quux': {},
+            '/baz': {},
+            '/blam': {}
+        }
+        restore_paths = [
+            '/foo',
+            '/bar/baz',
+            '/quux'
+        ]
+        restore_files = [
+            '/foo',
+            '/bar/baz/blarg1',
+            '/bar/baz/blarg2',
+            '/bar/baz/blarg/quux'
+        ]
+        ms3 = self.mock_s3.return_value
+        ms3.get_filelist.return_value = s3files
+        with patch('%s._make_restore_file_list' % pb,
+                   autospec=True) as mock_mrfl:
+            mock_mrfl.return_value = restore_files
+            self.cls.restore('/l/p', restore_paths)
+        assert mock_mrfl.mock_calls == [
+            call(self.cls, restore_paths, s3files)
+        ]
+        assert ms3.mock_calls == [
+            call.get_filelist(),
+            call.get_file('/foo', '/l/p'),
+            call.get_file('/bar/baz/blarg1', '/l/p'),
+            call.get_file('/bar/baz/blarg2', '/l/p'),
+            call.get_file('/bar/baz/blarg/quux', '/l/p'),
+        ]
+
+    def test_error(self):
+
+        def se_get(fpath, local_prefix):
+            if fpath == '/bar/baz/blarg1':
+                raise RuntimeError('foo')
+            return None
+
+        s3files = {
+            '/foo': {},
+            '/bar/baz/blarg1': {},
+            '/bar/baz/blarg2': {},
+            '/bar/baz/blarg/quux': {},
+            '/baz': {},
+            '/blam': {}
+        }
+        restore_paths = [
+            '/foo',
+            '/bar/baz',
+            '/quux'
+        ]
+        restore_files = [
+            '/foo',
+            '/bar/baz/blarg1',
+            '/bar/baz/blarg2',
+            '/bar/baz/blarg/quux'
+        ]
+        ms3 = self.mock_s3.return_value
+        ms3.get_filelist.return_value = s3files
+        ms3.get_file.side_effect = se_get
+        with patch('%s._make_restore_file_list' % pb,
+                   autospec=True) as mock_mrfl:
+            mock_mrfl.return_value = restore_files
+            self.cls.restore('/l/p', restore_paths)
+        assert mock_mrfl.mock_calls == [
+            call(self.cls, restore_paths, s3files)
+        ]
+        assert ms3.mock_calls == [
+            call.get_filelist(),
+            call.get_file('/foo', '/l/p'),
+            call.get_file('/bar/baz/blarg1', '/l/p'),
+            call.get_file('/bar/baz/blarg2', '/l/p'),
+            call.get_file('/bar/baz/blarg/quux', '/l/p'),
+        ]
+
+
+class TestMakeRestoreFileList(object):
+
+    def setup(self):
+        with patch('%s.S3Wrapper' % pbm, autospec=True) as mock_s3:
+            self.cls = FileSyncer('bname')
+            self.mock_s3 = mock_s3
+
+    def test_make_restore_file_list(self):
+        s3files = {
+            '/foo': {},
+            '/bar/baz/blarg1': {},
+            '/bar/baz/blarg2': {},
+            '/bar/baz/blarg/quux': {},
+            '/baz': {},
+            '/blam': {}
+        }
+        restore_paths = [
+            '/foo',
+            '/bar/baz',
+            '/quux'
+        ]
+        expected = [
+            '/foo',
+            '/bar/baz/blarg1',
+            '/bar/baz/blarg2',
+            '/bar/baz/blarg/quux'
+        ]
+        res = self.cls._make_restore_file_list(restore_paths, s3files)
+        assert sorted(res) == sorted(expected)

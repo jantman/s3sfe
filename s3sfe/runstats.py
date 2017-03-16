@@ -240,7 +240,7 @@ class RunStats(object):
             intcomma(self.files_uploaded), naturalsize(self.bytes_uploaded)
         )
         if len(self.error_files) < 1:
-            s += "All files uploaded successfully.\n"
+            s += "\nAll files uploaded successfully.\n"
         else:
             s += "\n%d files failed uploading:\n" % len(self.error_files)
             for f in sorted(self.error_files):

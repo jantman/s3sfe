@@ -172,3 +172,35 @@ class TestRunStats(object):
             mocks['node'].return_value = 'myhost'
             res = self.stats.summary
         assert res == expected
+
+    def test_summary_no_errors_dry_run(self):
+        self.stats._errors = []
+        self.stats._dry_run = True
+        expected = dedent("""
+        s3sfe v%s run report
+        Sunday, January 01, 2017 11:12:28 (myuser on myhost)
+        ----------------------------------------------------
+        -- DRY RUN - NO FILES ACTUALLY UPLOADED --
+        Total Run Time: 0:00:15
+        Time Listing Files: 0:00:01
+        Time Getting Metadata: 0:00:02
+        Time Querying S3: 0:00:03
+        Time Calculating Uploads: 0:00:04
+        Time Uploading Files: 0:00:05
+
+        Backed-up files on disk: 11 files; 12.3 kB
+        Uploaded 10 files; 789 Bytes
+
+        All files uploaded successfully.
+        -- DRY RUN - NO FILES ACTUALLY UPLOADED --
+        """ % VERSION).strip() + "\n"
+        with patch.multiple(
+            pbm,
+            autospec=True,
+            getuser=DEFAULT,
+            node=DEFAULT
+        ) as mocks:
+            mocks['getuser'].return_value = 'myuser'
+            mocks['node'].return_value = 'myhost'
+            res = self.stats.summary
+        assert res == expected

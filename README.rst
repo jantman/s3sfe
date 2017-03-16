@@ -76,12 +76,14 @@ s3sfe takes all of its configuration via command-line options. It does, however,
 expect a few elements of configuration to be present on the system:
 
 * Your AWS Credentials must be available to the program in one of the `methods supported by boto3 <http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials>`_, typically either environment variables or one of the supported credentials files (``~/.aws/credentials`` or ``~/.aws/config``) or boto configuration files (``~/.boto`` or ``/etc/boto.cfg``).
-* Your encryption key for `S3 Server-Side Encryption with Customer-Provided Encryption Keys (SSE-C) <http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html>`_ must be stored in a file readable by this program. This must be a base64-encoded 256-bit AES256 key.
+* Your encryption key for `S3 Server-Side Encryption with Customer-Provided Encryption Keys (SSE-C) <http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html>`_ must be stored in a file readable by this program. This must be a 256-bit AES256 key, stored in binary format.
 
 Usage
 -----
 
-``s3sfe --help``
+To backup: ``s3sfe --help``
+
+To restore: ``s3sfe-restore --help``
 
 Bugs and Feature Requests
 -------------------------
