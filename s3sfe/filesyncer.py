@@ -95,11 +95,11 @@ class FileSyncer(object):
         meta_dt = dtnow()
         files = self._file_meta(all_files)
         total_size = sum(files[f][0] for f in files.keys())
-        logger.debug('Source: %d files total, %d bytes total',
+        logger.info('Source: %d files total, %d bytes total',
                      len(files), total_size)
         query_dt = dtnow()
         s3files = self.s3.get_filelist()
-        logger.debug('S3: %d files total', len(s3files))
+        logger.info('S3: %d files total', len(s3files))
         calc_dt = dtnow()
         to_upload = self._files_to_upload(files, s3files)
         upload_dt = dtnow()
@@ -303,7 +303,7 @@ class FileSyncer(object):
                 # md5sums match
                 continue
             files[k] = local_files[k]
-        logger.debug('Found %d files to upload', len(files))
+        logger.info('Found %d files to upload', len(files))
         return files
 
     def _upload_files(self, files):
@@ -319,6 +319,7 @@ class FileSyncer(object):
           bytes uploaded)
         :rtype: tuple
         """
+        logger.info('Beginning upload of %d files', len(files))
         errored = []
         total_bytes = 0
         for f in sorted(files.keys()):
