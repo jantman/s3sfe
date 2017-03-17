@@ -98,7 +98,7 @@ class FileSyncer(object):
         logger.info('Source: %d files total, %d bytes total',
                     len(files), total_size)
         query_dt = dtnow()
-        s3files = self.s3.get_filelist()
+        s3files = self._s3_files()
         logger.info('S3: %d files total', len(s3files))
         calc_dt = dtnow()
         to_upload = self._files_to_upload(files, s3files)
@@ -111,6 +111,24 @@ class FileSyncer(object):
             len(all_files), len(to_upload), errors, total_size, uploaded_bytes,
             dry_run=self._dry_run
         )
+
+    def _s3_files(self):
+        """
+        Return a dict of files currently in S3, where keys are local file
+        paths and values are 3-tuples of (file size in bytes, file modification
+        time as a float timestamp, and file md5sum as a hex string).
+
+        :return: mapping of file paths to file metadata
+        :rtype: dict
+        """
+        files = {}
+        for k, d in self.s3.get_filelist().items():
+            files[k] = (
+                int(d.get('size_b', 0)),
+                float(d.get('mtime', 0)),
+                d.get('md5sum', None)
+            )
+        return files
 
     def restore(self, local_prefix, file_paths):
         """
@@ -299,10 +317,10 @@ class FileSyncer(object):
                      len(local_files), len(s3_files))
         files = {}
         for k in local_files.keys():
-            if k in s3_files and local_files[k][2] == s3_files[k][2]:
-                # md5sums match
-                continue
-            files[k] = local_files[k]
+            if k not in s3_files:
+                files[k] = local_files[k]
+            elif local_files[k][2] != s3_files[k][2]:
+                files[k] = local_files[k]
         logger.info('Found %d files to upload', len(files))
         return files
 
