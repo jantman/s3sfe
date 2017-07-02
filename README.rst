@@ -13,10 +13,6 @@ s3sfe
    :alt: GitHub Open Issues
    :target: https://github.com/jantman/s3sfe/issues
 
-.. image:: https://landscape.io/github/jantman/s3sfe/master/landscape.svg
-   :target: https://landscape.io/github/jantman/s3sfe/master
-   :alt: Code Health
-
 .. image:: https://secure.travis-ci.org/jantman/s3sfe.png?branch=master
    :target: http://travis-ci.org/jantman/s3sfe
    :alt: travis-ci for master branch
