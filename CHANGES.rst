@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Unreleased Changes
+------------------
+
+* Stop testing and supporting py33
+
 0.1.1 (2017-03-17)
 ------------------
 
