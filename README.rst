@@ -51,7 +51,7 @@ This tool takes a list of files or directories on the local filesystem and syncs
 Requirements
 ------------
 
-* Python 2.7 or 3.3+ (currently tested with 2.7, 3.3+ and developed with 3.6)
+* Python 2.7 or 3.4+ (currently tested with 2.7, 3.4+ and developed with 3.6)
 * Python `VirtualEnv <http://www.virtualenv.org/>`_ and ``pip`` (recommended installation method; your OS/distribution should have packages for these)
 
 Installation
