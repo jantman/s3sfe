@@ -25,9 +25,9 @@ s3sfe
    :target: https://readthedocs.org/projects/s3sfe/?badge=latest
    :alt: sphinx documentation for latest release
 
-.. image:: http://www.repostatus.org/badges/latest/wip.svg
-   :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
-   :target: http://www.repostatus.org/#wip
+.. image:: http://www.repostatus.org/badges/latest/inactive.svg
+   :alt: Project Status: Inactive – The project has reached a stable, usable state but is no longer being actively developed; support/maintenance will be provided as time allows.
+   :target: http://www.repostatus.org/#inactive
 
 s3sfe (S3 Sync Filelist Encrypted) Sync a list of files to S3, using server-side encryption with customer-provided keys.
 
