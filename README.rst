@@ -1,5 +1,5 @@
-s3sfe
-=====
+s3sfe - Abandoned / Unsupported
+===============================
 
 .. image:: https://img.shields.io/pypi/v/s3sfe.svg?maxAge=2592000
    :target: https://pypi.python.org/pypi/s3sfe
@@ -25,9 +25,9 @@ s3sfe
    :target: https://readthedocs.org/projects/s3sfe/?badge=latest
    :alt: sphinx documentation for latest release
 
-.. image:: http://www.repostatus.org/badges/latest/inactive.svg
-   :alt: Project Status: Inactive – The project has reached a stable, usable state but is no longer being actively developed; support/maintenance will be provided as time allows.
-   :target: http://www.repostatus.org/#inactive
+.. image:: https://www.repostatus.org/badges/latest/unsupported.svg
+   :alt: Project Status: Unsupported – The project has reached a stable, usable state but the author(s) have ceased all work on it. A new maintainer may be desired.
+   :target: https://www.repostatus.org/#unsupported
 
 s3sfe (S3 Sync Filelist Encrypted) Sync a list of files to S3, using server-side encryption with customer-provided keys.
 
